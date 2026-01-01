@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPL ELITE | SMART TRACKER</title>
+    <style>
+        :root { 
+            --primary: #3d195d; 
+            --secondary: #e90052; 
+            --accent: #04f5ff; 
+            --bg-deep: #0a001a; 
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-heavy: rgba(255, 255, 255, 0.98);
+            --text-light: #ffffff;
+            --text-dark: #1a1a1a;
+        }
+
+        * { box-sizing: border-box; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        body { 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            background: radial-gradient(circle at 50% 0%, #3d195d 0%, #0a001a 100%);
+            background-attachment: fixed;
+            margin: 0; padding: 0; color: var(--text-light); line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* --- TICKER --- */
+        .ticker-wrap { background: var(--secondary); color: white; padding: 6px 0; font-size: 0.7rem; font-weight: 800; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .ticker-move { display: inline-block; animation: ticker 25s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* --- LOGO & HEADER --- */
+        .header-area { padding: 40px 5%; text-align: center; }
+        
+        .logo-container {
+            display: inline-block;
+            position: relative;
+            animation: float 4s ease-in-out infinite;
+            cursor: pointer;
+        }
+
+        .logo-img {
+            width: 130px;
+            height: 130px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 15px var(--accent));
+            border-radius: 20px;
+        }
+
+        .logo-container:hover .logo-img {
+            transform: scale(1.1) rotate(3deg);
+            filter: drop-shadow(0 0 25px var(--accent));
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        /* --- NAV --- */
+        .navbar {
+            position: sticky; top: 0; z-index: 1000; background: rgba(61, 25, 93, 0.9);
+            backdrop-filter: blur(15px); border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 5%; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .container { max-width: 1300px; margin: auto; padding: 20px; }
+        .glass-card { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; margin-bottom: 25px; }
+
+        /* --- TABLES --- */
+        .table-wrap { border-radius: 15px; overflow-x: auto; background: var(--glass-heavy); margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        table { width: 100%; border-collapse: collapse; color: var(--text-dark); min-width: 700px; }
+        th { background: var(--primary); color: white; padding: 15px; font-size: 0.7rem; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; }
+        .team-name { text-align: left; color: var(--primary); font-weight: 800; }
+        .pts-col { background: rgba(233,0,82,0.05); color: var(--secondary); font-weight: 900; }
+
+        /* --- MATCH ITEMS --- */
+        .match-item {
+            background: var(--glass-heavy); color: var(--text-dark);
+            margin-bottom: 12px; border-radius: 15px; padding: 20px;
+            display: grid; grid-template-columns: 1.2fr auto 1.2fr; align-items: center;
+            position: relative; cursor: pointer; border-left: 6px solid #ccc;
+        }
+        .match-item:hover { transform: translateX(5px); background: #fff; }
+        .match-item.played { border-left-color: var(--accent); box-shadow: 0 0 15px rgba(4, 245, 255, 0.2); }
+        .vs-box { background: var(--primary); color: white; padding: 8px 15px; border-radius: 10px; font-weight: 900; min-width: 70px; text-align: center; }
+        .match-date { position: absolute; top: 5px; left: 20px; font-size: 0.6rem; color: #999; font-weight: 700; }
+
+        /* --- SIDE PANEL --- */
+        .side-panel { position: fixed; right: -450px; top: 0; width: min(420px, 95%); height: 100%; background: white; z-index: 2000; color: #333; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); overflow-y: auto; box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
+        .side-panel.open { right: 0; }
+        .panel-header { background: var(--primary); color: white; padding: 30px 20px; text-align: center; }
+        .panel-score-big { font-size: 3rem; font-weight: 900; color: var(--accent); display: flex; justify-content: center; gap: 20px; align-items: center; }
+        
+        /* --- BUTTONS --- */
+        .btn-action { background: linear-gradient(135deg, var(--secondary), #ff2a6d); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+        .admin-only { display: none; }
+        .is-admin .admin-only { display: block; }
+
+        .hidden { display: none !important; }
+        .grid-main { display: grid; grid-template-columns: 1.5fr 1fr; gap: 25px; }
+
+        @media (max-width: 900px) { .grid-main { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body id="bodyTag">
+
+<div class="ticker-wrap"><div class="ticker-move" id="liveTicker">WELCOME TO FPL 2026 • CLICK ANY MATCH TO UPDATE SCORES OR VIEW DETAILS • PRIDE AND GLORY AWAITS!</div></div>
+
+<nav class="navbar">
+    <div style="font-weight: 900; letter-spacing: 2px; color: white;">FPL<span style="color:var(--accent)">.ELITE</span></div>
+    <div>
+        <button id="loginBtn" class="btn-action" style="padding: 6px 15px; font-size: 0.7rem; width: auto;" onclick="openLogin()">ADMIN LOGIN</button>
+        <button id="logoutBtn" class="hidden btn-action" style="background:#444; padding: 6px 15px; font-size: 0.7rem; width: auto;" onclick="doLogout()">LOGOUT</button>
+    </div>
+</nav>
+
+<header class="header-area">
+    <div class="logo-container">
+        <img src="file:///E:/MY EDIT/MAterials/image_c15a5c28.png" class="logo-img" alt="FPL Logo" onerror="this.src='https://via.placeholder.com/130/3d195d/04f5ff?text=FPL'">
+    </div>
+    <h1 style="text-transform: uppercase; font-weight: 900; letter-spacing: 3px; margin-top: 20px;">Football Premier League</h1>
+</header>
+
+<div class="container">
+    
+    <div id="createFixtureArea" class="glass-card admin-only">
+        <h3 style="margin:0 0 15px 0; color:var(--accent)">📅 FIXTURE SCHEDULER</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <select id="newH" style="flex:1; padding:10px; border-radius:8px;"></select>
+            <span style="color:white; align-self:center">VS</span>
+            <select id="newA" style="flex:1; padding:10px; border-radius:8px;"></select>
+            <input type="date" id="newDate" style="padding:10px; border-radius:8px;">
+            <button class="btn-action" style="width:auto; padding:0 25px" onclick="addNewMatch()">SCHEDULE</button>
+        </div>
+    </div>
+
+    <div class="grid-main">
+        <div>
+            <div class="glass-card">
+                <h3 style="margin-top:0">🏆 LEAGUE STANDINGS</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Pos</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th class="pts-col">Pts</th></tr>
+                        </thead>
+                        <tbody id="standingsBody"></tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top:30px">👟 GOLDEN BOOT</h3>
+                <div class="table-wrap" style="max-width: 450px;">
+                    <table>
+                        <thead><tr><th>Rank</th><th style="text-align:left">Player</th><th>Goals</th></tr></thead>
+                        <tbody id="scorerBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="glass-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+                    <h3 style="margin:0">📅 FIXTURES</h3>
+                    <select id="teamFilter" onchange="updateUI()" style="width:140px; padding:5px; border-radius:5px">
+                        <option value="ALL">All Clubs</option>
+                    </select>
+                </div>
+                <div id="matchList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hidden" id="overlay" onclick="closePanel()" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1500; backdrop-filter:blur(8px)"></div>
+<div id="sidePanel" class="side-panel">
+    <div id="panelContent"></div>
+</div>
+
+<div id="authModal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; display:flex; justify-content:center; align-items:center">
+    <div class="glass-card" id="loginBox" style="background:white; color:#333; width:340px; text-align:center; padding: 40px;">
+        <h3 style="margin:0 0 20px 0;">ADMIN SECURE LOGIN</h3>
+        <input type="password" id="adminPassInput" placeholder="Password" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;">
+        <button class="btn-action" onclick="doLogin()">AUTHORIZE</button>
+        <p onclick="showForgot()" style="font-size:0.75rem; color:var(--secondary); cursor:pointer; margin-top:15px; font-weight: 700;">Forgot Password?</p>
+        <button onclick="closeAuthModal()" style="margin-top:15px; background:none; border:none; cursor:pointer; color:#888;">Cancel</button>
+    </div>
+    <div class="glass-card hidden" id="forgotBox" style="background:white; color:#333; width:340px; text-align:center; padding: 40px;">
+        <h3 style="color:var(--secondary); margin-top:0;">RESET PIN</h3>
+        <p style="font-size:0.8rem; margin-bottom:15px;">Enter Registered Mobile Number:</p>
+        <input type="text" id="verifyMobile" placeholder="7047XXXXXX" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;">
+        <div id="newPassDiv" class="hidden">
+            <input type="password" id="newPassInput" placeholder="New Password" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;">
+        </div>
+        <button id="resetBtn" class="btn-action" onclick="handleReset()">VERIFY MOBILE</button>
+    </div>
+</div>
+
+<script>
+    const MOBILE_AUTH = "7047461318";
+    const teamList = ["Parbatipur Cricket Association", "Chechua Gobindanagar Dishari Club", "Tilanda Vidyasagar Sporting Club", "Brindabanchak Biplobi Tarun Sangha", "Goura United", "Goura Sonamui Children Academy", "Sonakhali Football Lovers", "Radhakantapur Football Academy"];
+    let tournament = JSON.parse(localStorage.getItem('fpl_v6_data')) || { matches: [] };
+    let isAdmin = false;
+
+    function init() {
+        const teamOpts = `<option value="">Select Club</option>` + teamList.map(t => `<option value="${t}">${t}</option>`).join('');
+        document.getElementById('newH').innerHTML = teamOpts;
+        document.getElementById('newA').innerHTML = teamOpts;
+        document.getElementById('teamFilter').innerHTML = `<option value="ALL">All Clubs</option>` + teamList.map(t => `<option value="${t}">${t}</option>`).join('');
+        updateUI();
+    }
+
+    // --- AUTH ---
+    function openLogin() { document.getElementById('authModal').classList.remove('hidden'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+    function showForgot() { document.getElementById('loginBox').classList.add('hidden'); document.getElementById('forgotBox').classList.remove('hidden'); }
+    function handleReset() {
+        if(document.getElementById('verifyMobile').value === MOBILE_AUTH) {
+            document.getElementById('newPassDiv').classList.remove('hidden');
+            document.getElementById('resetBtn').innerText = "UPDATE PASSWORD";
+            document.getElementById('resetBtn').onclick = () => {
+                const p = document.getElementById('newPassInput').value;
+                if(p.length < 4) return alert("Too short");
+                localStorage.setItem('fpl_admin_pass', p);
+                alert("Password Updated Successfully!"); location.reload();
+            };
+        } else alert("Mobile Number Verification Failed");
+    }
+    function doLogin() {
+        const saved = localStorage.getItem('fpl_admin_pass') || "admin123";
+        if(document.getElementById('adminPassInput').value === saved) {
+            isAdmin = true;
+            document.getElementById('bodyTag').classList.add('is-admin');
+            document.getElementById('loginBtn').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            closeAuthModal(); updateUI();
+        } else alert("Access Denied: Wrong Password");
+    }
+    function doLogout() { location.reload(); }
+
+    // --- CORE LOGIC ---
+    function addNewMatch() {
+        const h = document.getElementById('newH').value, a = document.getElementById('newA').value, d = document.getElementById('newDate').value;
+        if(!h || !a || h === a || !d) return alert("Please provide all match details");
+        tournament.matches.push({ id: Date.now(), date: d, hTeam: h, aTeam: a, hScore: 0, aScore: 0, hGoals: [], aGoals: [], played: false });
+        saveData();
+    }
+
+    function updateGoalCount() {
+        const hC = document.getElementById('hGoalList').children.length;
+        const aC = document.getElementById('aGoalList').children.length;
+        document.getElementById('liveHScore').innerText = hC;
+        document.getElementById('liveAScore').innerText = aC;
+    }
+
+    function addGoalField(side, name="", min="") {
+        const div = document.createElement('div');
+        div.style = "display:flex; gap:5px; margin-bottom:10px; padding: 5px; background: #f9f9f9; border-radius: 8px;";
+        div.innerHTML = `<input type="text" placeholder="Player" value="${name}" style="flex:2; padding:8px; border-radius:5px; border:1px solid #ddd">
+                         <input type="number" placeholder="Min" value="${min}" style="width:60px; padding:8px; border-radius:5px; border:1px solid #ddd">
+                         <button onclick="this.parentElement.remove(); updateGoalCount()" style="color:red; background:none; border:none; cursor:pointer; font-size:1.4rem; padding: 0 5px;">&times;</button>`;
+        document.getElementById(side + 'GoalList').appendChild(div);
+        updateGoalCount();
+    }
+
+    function saveMatchData(id) {
+        const m = tournament.matches.find(x => x.id == id);
+        const hG = Array.from(document.getElementById('hGoalList').children).map(r => ({name: r.querySelectorAll('input')[0].value, min: r.querySelectorAll('input')[1].value})).filter(g => g.name);
+        const aG = Array.from(document.getElementById('aGoalList').children).map(r => ({name: r.querySelectorAll('input')[0].value, min: r.querySelectorAll('input')[1].value})).filter(g => g.name);
+        
+        m.hScore = hG.length;
+        m.aScore = aG.length;
+        m.hGoals = hG;
+        m.aGoals = aG;
+        m.played = (hG.length > 0 || aG.length > 0 || confirm("Mark this match as Finished?"));
+        
+        saveData();
+        closePanel();
+    }
+
+    function deleteMatch(id) {
+        if(confirm("Permanently delete this match?")) {
+            tournament.matches = tournament.matches.filter(x => x.id != id);
+            saveData();
+            closePanel();
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem('fpl_v6_data', JSON.stringify(tournament));
+        updateUI();
+    }
+
+    function updateUI() {
+        let stats = {}; let scorers = {};
+        const filter = document.getElementById('teamFilter').value;
+        teamList.forEach(t => stats[t] = {p:0, w:0, d:0, l:0, gf:0, ga:0, pts:0});
+
+        tournament.matches.forEach(m => {
+            if(m.played) {
+                stats[m.hTeam].p++; stats[m.aTeam].p++;
+                stats[m.hTeam].gf += m.hScore; stats[m.hTeam].ga += m.aScore;
+                stats[m.aTeam].gf += m.aScore; stats[m.aTeam].ga += m.hScore;
+                if(m.hScore > m.aScore) { stats[m.hTeam].w++; stats[m.hTeam].pts += 3; stats[m.aTeam].l++; }
+                else if(m.aScore > m.hScore) { stats[m.aTeam].w++; stats[m.aTeam].pts += 3; stats[m.hTeam].l++; }
+                else { stats[m.hTeam].d++; stats[m.hTeam].pts += 1; stats[m.aTeam].d++; stats[m.aTeam].pts += 1; }
+                [...m.hGoals, ...m.aGoals].forEach(g => { if(g.name) scorers[g.name] = (scorers[g.name] || 0) + 1; });
+            }
+        });
+
+        // Standings
+        document.getElementById('standingsBody').innerHTML = Object.entries(stats)
+            .sort((a,b) => b[1].pts - a[1].pts || (b[1].gf-b[1].ga) - (a[1].gf-a[1].ga))
+            .map((t, i) => `<tr><td>${i+1}</td><td class="team-name">${t[0]}</td><td>${t[1].p}</td><td>${t[1].w}</td><td>${t[1].d}</td><td>${t[1].l}</td><td>${t[1].gf}</td><td>${t[1].ga}</td><td>${t[1].gf-t[1].ga}</td><td class="pts-col">${t[1].pts}</td></tr>`).join('');
+
+        // Scorers
+        document.getElementById('scorerBody').innerHTML = Object.entries(scorers).sort((a,b) => b[1]-a[1]).slice(0, 10)
+            .map((s, i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${s[0]}</b></td><td><b style="color:var(--secondary)">${s[1]}</b></td></tr>`).join('');
+
+        // Ticker Latest Result
+        const playedMatches = tournament.matches.filter(m => m.played);
+        if(playedMatches.length > 0) {
+            const last = playedMatches[playedMatches.length - 1];
+            document.getElementById('liveTicker').innerText = `LATEST RESULT: ${last.hTeam} ${last.hScore} - ${last.aScore} ${last.aTeam} • SEASON 2026 IN FULL SWING • DOWNLOAD THE APP FOR MORE!`;
+        }
+
+        // Fixtures
+        const filtered = tournament.matches.filter(m => filter === 'ALL' || m.hTeam === filter || m.aTeam === filter);
+        document.getElementById('matchList').innerHTML = filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).map(m => `
+            <div class="match-item ${m.played ? 'played' : ''}" onclick="openPanel(${m.id})">
+                <div class="match-date">📅 ${m.date}</div>
+                <div style="font-weight:800; font-size:0.8rem">${m.hTeam}</div>
+                <div class="vs-box">${m.played ? m.hScore + ' - ' + m.aScore : 'VS'}</div>
+                <div style="font-weight:800; font-size:0.8rem; text-align:right">${m.aTeam}</div>
+            </div>
+        `).join('');
+    }
+
+    function openPanel(id) {
+        const m = tournament.matches.find(x => x.id == id);
+        let content = '';
+
+        if(isAdmin) {
+            content = `
+                <div class="panel-header">
+                    <p style="margin:0; opacity:0.8; font-weight:800;">EDIT MATCH DATA</p>
+                    <div class="panel-score-big">
+                        <span id="liveHScore">${m.hScore}</span> : <span id="liveAScore">${m.aScore}</span>
+                    </div>
+                    <p style="margin:0; font-size:0.75rem">${m.date}</p>
+                </div>
+                <div style="padding:20px">
+                    <h4 style="margin:0 0 10px 0; font-size: 0.9rem;">🏠 ${m.hTeam}</h4>
+                    <div id="hGoalList"></div>
+                    <button class="btn-action" style="background:#f0f0f0; color:#333; font-size:0.7rem; padding:8px; margin-bottom:20px" onclick="addGoalField('h')">+ ADD HOME GOAL</button>
+
+                    <h4 style="margin:0 0 10px 0; font-size: 0.9rem;">✈️ ${m.aTeam}</h4>
+                    <div id="aGoalList"></div>
+                    <button class="btn-action" style="background:#f0f0f0; color:#333; font-size:0.7rem; padding:8px; margin-bottom:20px" onclick="addGoalField('a')">+ ADD AWAY GOAL</button>
+
+                    <button class="btn-action" onclick="saveMatchData(${m.id})" style="margin-top:20px">UPDATE MATCH</button>
+                    <button onclick="deleteMatch(${m.id})" style="width:100%; background:none; border:none; color:red; margin-top:15px; cursor:pointer; font-weight:bold; font-size:0.8rem">DELETE FIXTURE</button>
+                </div>`;
+        } else {
+            content = `
+                <div class="panel-header">
+                    <p style="margin:0; opacity:0.8; font-weight:800;">MATCH RESULT</p>
+                    <div class="panel-score-big">${m.played ? m.hScore + ' : ' + m.aScore : 'VS'}</div>
+                    <p style="margin:0; font-size:0.75rem">${m.date}</p>
+                </div>
+                <div style="padding:20px">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; text-align:center">
+                        <div style="border-right: 1px solid #eee; padding-right: 10px;">
+                            <b style="color:var(--primary); font-size: 0.85rem;">${m.hTeam}</b><br>
+                            <div style="font-size:0.8rem; margin-top:10px; text-align: left;">${m.hGoals.map(g => "⚽ " + g.name + " (" + g.min + "')").join('<br>') || 'No Goals'}</div>
+                        </div>
+                        <div style="padding-left: 10px;">
+                            <b style="color:var(--secondary); font-size: 0.85rem;">${m.aTeam}</b><br>
+                            <div style="font-size:0.8rem; margin-top:10px; text-align: left;">${m.aGoals.map(g => "⚽ " + g.name + " (" + g.min + "')").join('<br>') || 'No Goals'}</div>
+                        </div>
+                    </div>
+                    <button class="btn-action" onclick="closePanel()" style="margin-top:40px">CLOSE VIEW</button>
+                </div>`;
+        }
+
+        document.getElementById('panelContent').innerHTML = content;
+        if(isAdmin) {
+            m.hGoals.forEach(g => addGoalField('h', g.name, g.min));
+            m.aGoals.forEach(g => addGoalField('a', g.name, g.min));
+        }
+        document.getElementById('sidePanel').classList.add('open');
+        document.getElementById('overlay').classList.remove('hidden');
+    }
+
+    function closePanel() { document.getElementById('sidePanel').classList.remove('open'); document.getElementById('overlay').classList.add('hidden'); }
+
+    init();
+</script>
+</body>
+</html>
